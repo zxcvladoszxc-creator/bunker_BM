@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bunker Sync v10.2</title>
+    <title>Bunker Unique v10.3</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -33,7 +33,7 @@
         button:disabled { opacity: 0.3; cursor: not-allowed; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .log-box { background: #000; border-radius: 8px; padding: 8px; margin-top: 15px; font-size: 10px; color: #777; height: 80px; overflow-y: auto; border: 1px solid #1a1a1a; }
-        .player-row { background: #111; padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 12px; border: 1px solid #222; }
+        .player-row { background: #111; padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 11px; border: 1px solid #222; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; } }
     </style>
 </head>
@@ -73,7 +73,7 @@
 
         <div id="ui_my_card"></div>
 
-        <h3 style="color:var(--gray); font-size:9px; margin:15px 0 5px 0;">СПИСОК ВЫЖИВШИХ:</h3>
+        <h3 style="color:var(--gray); font-size:9px; margin:15px 0 5px 0;">ВЫЖИВШИЕ В ГРУППЕ:</h3>
         <div id="ui_players"></div>
         <div class="log-box" id="ui_log"></div>
     </div>
@@ -81,17 +81,17 @@
 
 <script>
     const dbData = {
-        d: ["Ядерная война", "Зомби-вирус", "Падение астероида", "Ледниковый период", "Извержение супервулкана", "Глобальный потоп"],
-        threats: ["Радиация", "Мародеры", "Мутанты", "Нехватка воды", "Дикие звери"],
-        bunker: ["Военный склад", "Заброшенное метро", "Горная пещера", "Подземный гараж", "Морской контейнер"],
-        p: ["Врач", "Инженер", "Повар", "Полицейский", "Учитель", "Фермер", "Охотник", "Слесарь", "Пилот"],
+        d: ["Ядерная война", "Зомби-вирус", "Падение астероида", "Ледниковый период", "Извержение супервулкана", "Глобальный потоп", "Кибер-восстание"],
+        threats: ["Радиация", "Мародеры", "Мутанты", "Нехватка воды", "Дикие звери", "Ядовитый смог"],
+        bunker: ["Военный склад", "Заброшенное метро", "Горная пещера", "Подземный гараж", "Морской контейнер", "Подвал школы"],
+        p: ["Врач", "Инженер", "Повар", "Полицейский", "Учитель", "Фермер", "Охотник", "Слесарь", "Пилот", "Сварщик", "Связист", "Психолог", "Химик", "Геолог"],
         g: ["Мужчина", "Женщина"],
         r: ["Плодовит(а)", "Бесплоден(на)"],
-        health: ["Идеальное", "Астма", "Диабет", "Слабое сердце", "Близорукость", "Аллергия"],
-        hobbies: ["Рыбалка", "Спорт", "Кулинария", "Рисование", "Чтение", "Ориентирование"],
-        bags: ["Аптечка", "Топор", "Рация", "Фонарь", "Пистолет", "Запас еды", "Нож"],
-        facts: ["Знает код от сейфа", "Гениальный интеллект", "Мастер на все руки", "Бывший военный"],
-        s: ["СМЕНА ПОЛА", "ИСЦЕЛЕНИЕ", "ОМОЛОЖЕНИЕ", "НОВАЯ КАТАСТРОФА"]
+        health: ["Идеальное", "Астма", "Диабет", "Слабое сердце", "Близорукость", "Аллергия", "Слабый иммунитет", "Бессонница"],
+        hobbies: ["Рыбалка", "Спорт", "Кулинария", "Рисование", "Чтение", "Ориентирование", "Йога", "Стрельба", "Плотничество"],
+        bags: ["Аптечка", "Топор", "Рация", "Фонарь", "Пистолет", "Запас еды", "Нож", "Веревка", "Спички", "Бинокль"],
+        facts: ["Знает код от сейфа", "Гениальный интеллект", "Мастер на все руки", "Бывший военный", "Знает 5 языков", "Чует опасность"],
+        s: ["СМЕНА ПОЛА", "ИСЦЕЛЕНИЕ", "ОМОЛОЖЕНИЕ", "НОВАЯ КАТАСТРОФА", "НОВАЯ УГРОЗА"]
     };
 
     const firebaseConfig = { databaseURL: "https://bunker-bm-853f2-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -103,6 +103,18 @@
     function sw(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
+    }
+
+    // Тщательное перемешивание массива на основе Seed
+    function shuffle(array, seed) {
+        let m = array.length, t, i;
+        while (m) {
+            i = Math.floor(seeded(seed++) * m--);
+            t = array[m];
+            array[m] = array[i];
+            array[i] = t;
+        }
+        return array;
     }
 
     function seeded(s) { var x = Math.sin(s) * 10000; return x - Math.floor(x); }
@@ -130,18 +142,39 @@
 
         database.ref('rooms/' + curRoom).once('value', snap => {
             if(!snap.exists()) return alert("Комната не найдена");
+            
+            // Получаем список игроков, чтобы понять порядковый номер текущего игрока
+            const roomData = snap.val();
+            const players = roomData.users ? Object.keys(roomData.users) : [];
+            const playerIndex = players.includes(myName) ? players.indexOf(myName) : players.length;
+
+            // Генерируем Seed на основе названия комнаты
+            let roomSeed = 0; 
+            for(let i=0; i<curRoom.length; i++) roomSeed += curRoom.charCodeAt(i);
+
+            // Создаем уникальные перемешанные колоды для этой комнаты
+            const profs = shuffle([...dbData.p], roomSeed + 1);
+            const healths = shuffle([...dbData.health], roomSeed + 2);
+            const hobs = shuffle([...dbData.hobbies], roomSeed + 3);
+            const bags = shuffle([...dbData.bags], roomSeed + 4);
+            const facts = shuffle([...dbData.facts], roomSeed + 5);
+            const specs = shuffle([...dbData.s], roomSeed + 6);
+
+            // Индивидуальный сид для биологии (пол/возраст/репродуктивность могут совпадать, это база)
             let s = 0; for(let i=0; i<(curRoom+myName).length; i++) s += (curRoom+myName).charCodeAt(i);
+
             const char = {
-                p: dbData.p[Math.floor(seeded(s+1)*dbData.p.length)],
-                bio: dbData.g[Math.floor(seeded(s+2)*dbData.g.length)] + ", " + (Math.floor(seeded(s+3)*40)+20) + " лет",
-                r: dbData.r[Math.floor(seeded(s+4)*dbData.r.length)],
-                h: dbData.health[Math.floor(seeded(s+5)*dbData.health.length)],
-                hob: dbData.hobbies[Math.floor(seeded(s+6)*dbData.hobbies.length)],
-                b: dbData.bags[Math.floor(seeded(s+7)*dbData.bags.length)],
-                f: dbData.facts[Math.floor(seeded(s+8)*dbData.facts.length)],
-                s1: dbData.s[Math.floor(seeded(s+9)*dbData.s.length)],
-                s2: dbData.s[Math.floor(seeded(s+10)*dbData.s.length)]
+                p: profs[playerIndex % profs.length],
+                bio: dbData.g[Math.floor(seeded(s+1)*dbData.g.length)] + ", " + (Math.floor(seeded(s+2)*40)+18) + " лет",
+                r: dbData.r[Math.floor(seeded(s+3)*dbData.r.length)],
+                h: healths[playerIndex % healths.length],
+                hob: hobs[playerIndex % hobs.length],
+                b: bags[playerIndex % bags.length],
+                f: facts[playerIndex % facts.length],
+                s1: specs[(playerIndex * 2) % specs.length],
+                s2: specs[(playerIndex * 2 + 1) % specs.length]
             };
+
             database.ref(`rooms/${curRoom}/users/${myName}`).set({ char, public: { name: myName } });
             if(isHost) document.getElementById('startBtn').style.display = 'block';
             setupSync();
@@ -169,10 +202,10 @@
             for(let u in users) {
                 const pub = users[u].public || {};
                 container.innerHTML += `<div class="player-row"><b>${u}</b><br>
-                    <span style="color:#888; font-size:10px;">
+                    <span style="color:#888; line-height: 1.4;">
                         ${pub.p?'🛠️ '+pub.p:''} ${pub.bio?' | 🧬 '+pub.bio:''} ${pub.r?' | 🍼 '+pub.r:''}
                         ${pub.h?' | 🏥 '+pub.h:''} ${pub.hob?' | ⚽ '+pub.hob:''} ${pub.b?' | 🎒 '+pub.b:''} ${pub.f?' | 📄 '+pub.f:''}
-                        ${Object.keys(pub).length<=1?'Данные скрыты':''}
+                        ${Object.keys(pub).length<=1?'Все данные скрыты':''}
                     </span></div>`;
             }
         });
@@ -220,6 +253,8 @@
             const txt = card.toUpperCase();
             if(txt.includes("КАТАСТРОФА")) {
                 database.ref(`rooms/${curRoom}/disaster`).set(dbData.d[Math.floor(Math.random()*dbData.d.length)]);
+            } else if(txt.includes("УГРОЗА")) {
+                database.ref(`rooms/${curRoom}/threat`).set(dbData.threats[Math.floor(Math.random()*dbData.threats.length)]);
             } else {
                 for(let u in users) {
                     let c = users[u].char;
@@ -235,8 +270,7 @@
                     }
                     if(txt.includes("ИСЦЕЛ")) {
                         c.h = "Идеальное"; c.r = "Плодовит(а)";
-                        if(p.h) updP.h = c.h;
-                        if(p.r) updP.r = c.r;
+                        if(p.h) updP.h = c.h; if(p.r) updP.r = c.r;
                     }
                     database.ref(`rooms/${curRoom}/users/${u}/char`).set(c);
                     if(Object.keys(updP).length > 0) database.ref(`rooms/${curRoom}/users/${u}/public`).update(updP);
