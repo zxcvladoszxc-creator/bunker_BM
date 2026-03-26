@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bunker Debugged v9.1</title>
+    <title>Bunker v9.2: Reproduction Update</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -13,10 +13,10 @@
         .screen { display: none; animation: fadeIn 0.3s ease; }
         .active { display: block; }
         h1 { color: var(--red); text-align: center; font-size: 2.2rem; margin: 15px 0; text-shadow: 0 0 15px rgba(255,71,87,0.4); }
-        .card { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px; border-left: 4px solid var(--red); transition: 0.3s; }
+        .card { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px; border-left: 4px solid var(--red); }
         input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #222; background: #000; color: #fff; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 15px; background: var(--red); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
+        button { width: 100%; padding: 15px; background: var(--red); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        button:disabled { background: #222 !important; color: #555 !important; cursor: default; border-color: #333 !important; }
         .label { color: var(--gray); font-size: 10px; text-transform: uppercase; font-weight: 800; display: block; }
         .val { font-size: 15px; font-weight: 600; }
         .eye { float: right; cursor: pointer; background: #222; padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #333; }
@@ -37,7 +37,7 @@
 
     <div id="scr_h" class="screen">
         <h2>Новый сервер</h2>
-        <input type="text" id="h_room" placeholder="ID Комнаты (напр. ALPHA)">
+        <input type="text" id="h_room" placeholder="ID Комнаты">
         <button onclick="initRoom()">Запустить</button>
     </div>
 
@@ -56,12 +56,12 @@
         
         <div id="ui_disaster" class="card" style="border-color:var(--gold)">
             <span class="label">Сценарий катастрофы</span>
-            <span class="val" id="disaster_text">Ожидание данных...</span>
+            <span class="val" id="disaster_text">Загрузка...</span>
         </div>
 
         <div id="ui_my_card"></div>
 
-        <h3 style="color:var(--gray); font-size:10px; margin-top:15px; letter-spacing: 1px;">ВЫЖИВШИЕ В БУНКЕРЕ:</h3>
+        <h3 style="color:var(--gray); font-size:10px; margin-top:15px;">ВЫЖИВШИЕ:</h3>
         <div id="ui_players"></div>
         <div class="log-box" id="ui_log"></div>
     </div>
@@ -69,14 +69,15 @@
 
 <script>
     const dbData = {
-        d: ["Ядерная зима", "Всемирный потоп", "Зомби-апокалипсис", "Восстание машин", "Обледенение земли", "Кислотные дожди", "Солнечная вспышка", "Грибковое заражение", "Инопланетное вторжение", "Пандемия бесплодия"],
-        p: ["Хирург", "Электрик", "Повар", "Спецназовец", "Учитель", "Программист", "Инженер", "Агроном", "Ветеринар", "Священник", "Охотник", "Физик", "Химик", "Слесарь", "Психолог", "Пилот", "Строитель", "Адвокат"],
-        h: ["Идеальное", "Астма", "Диабет", "Слабое сердце", "Близорукость", "Аллергия на арахис", "Панические атаки", "Бессонница", "Хронический кашель", "Глухота на одно ухо"],
-        b: ["Аптечка", "Топор", "Рация", "Запас еды", "Фонарь", "Пистолет", "Семена", "Нож", "Фильтр для воды", "Спички", "Веревка", "Бронежилет"],
-        t: ["Лидер", "Мастер на все руки", "Меткий стрелок", "Выносливый", "Эрудит", "Скрытный", "Силач", "Везунчик"],
+        d: ["Ядерная зима", "Всемирный потоп", "Зомби-вирус", "Инопланетная жатва", "Оледенение", "Кислотный смог", "Вспышка на Солнце", "Грибковая инфекция"],
+        p: ["Хирург", "Электрик", "Повар", "Спецназовец", "Учитель", "Программист", "Инженер", "Агроном", "Священник", "Охотник", "Физик", "Слесарь", "Пилот"],
+        h: ["Идеальное", "Астма", "Диабет", "Слабое сердце", "Близорукость", "Аллергия", "Панические атаки", "Бессонница"],
+        b: ["Аптечка", "Топор", "Рация", "Запас еды", "Фонарь", "Пистолет", "Семена", "Нож", "Фильтр для воды"],
+        t: ["Лидер", "Мастер", "Снайпер", "Выносливый", "Эрудит", "Скрытный", "Силач"],
         g: ["Мужчина", "Женщина"],
-        phob: ["Темнота", "Высота", "Пауки", "Кровь", "Замкнутое пространство", "Огонь"],
-        s: ["СМЕНА ПОЛА (ВСЕМ)", "ОМОЛОЖЕНИЕ (ВСЕМ 18 ЛЕТ)", "ИСЦЕЛЕНИЕ (ВСЕМ)", "НОВАЯ КАТАСТРОФА", "ГИПНОЗ (БЕЗ ФОБИЙ)", "ОБМЕН ПРОФЕССИЯМИ", "ОБЫСК (МИНУС БАГАЖ)", "МУТАЦИЯ (НОВАЯ ЧЕРТА)"]
+        r: ["Плодовит(а)", "Бесплоден(на)"],
+        phob: ["Темнота", "Высота", "Пауки", "Кровь", "Огонь"],
+        s: ["СМЕНА ПОЛА (ВСЕМ)", "ОМОЛОЖЕНИЕ (ВСЕМ 18 ЛЕТ)", "ИСЦЕЛЕНИЕ (ВСЕМ)", "НОВАЯ КАТАСТРОФА", "ГИПНОЗ (БЕЗ ФОБИЙ)", "ОБМЕН ПРОФЕССИЯМИ", "ОБЫСК (МИНУС БАГАЖ)"]
     };
 
     const firebaseConfig = { databaseURL: "https://bunker-bm-853f2-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -97,11 +98,7 @@
         if(!curRoom) return;
         isHost = true;
         const globalDisaster = dbData.d[Math.floor(Math.random() * dbData.d.length)];
-        database.ref('rooms/' + curRoom).set({ 
-            disaster: globalDisaster,
-            log: ["Система инициализирована"], 
-            started: false 
-        });
+        database.ref('rooms/' + curRoom).set({ disaster: globalDisaster, log: ["Игра создана"], started: false });
         myName = "HOST_" + Math.floor(Math.random()*99);
         joinGame(true);
     }
@@ -118,8 +115,6 @@
             if(!room) return alert("Комната не найдена");
             if(room.started && !asHost) return alert("Вход закрыт!");
 
-            document.getElementById('disaster_text').innerText = room.disaster;
-
             let s = 0; for(let i=0; i<(curRoom+myName).length; i++) s += (curRoom+myName).charCodeAt(i);
             
             let pool = [...dbData.s];
@@ -131,38 +126,28 @@
                 h: dbData.h[Math.floor(seeded(s+2)*dbData.h.length)],
                 b: dbData.b[Math.floor(seeded(s+3)*dbData.b.length)],
                 g: dbData.g[Math.floor(seeded(s+5)*dbData.g.length)],
+                r: dbData.r[Math.floor(seeded(s+33)*dbData.r.length)], // Новая характеристика
                 age: Math.floor(seeded(s+6)*40)+20,
                 phob: dbData.phob[Math.floor(seeded(s+10)*dbData.phob.length)],
-                t: dbData.t[Math.floor(seeded(s+12)*dbData.t.length)],
                 s1: c1, s2: c2
             };
 
             database.ref(`rooms/${curRoom}/users/${myName}`).set({ char, public: { name: myName } });
             
-            // Если игрока удалил хост
-            database.ref(`rooms/${curRoom}/users/${myName}`).on('value', s => {
-                if(!s.exists()) { alert("Вы покинули бункер (Кик)"); location.reload(); }
-            });
-
             if(isHost) document.getElementById('startBtn').style.display = 'block';
-            setupGameSync();
+            setupSync();
             sw('scr_g');
         });
     }
 
-    function setupGameSync() {
-        database.ref(`rooms/${curRoom}/disaster`).on('value', s => {
-            document.getElementById('disaster_text').innerText = s.val();
-        });
+    function setupSync() {
+        database.ref(`rooms/${curRoom}/disaster`).on('value', s => { document.getElementById('disaster_text').innerText = s.val(); });
 
         database.ref(`rooms/${curRoom}/users/${myName}`).on('value', snap => {
             const data = snap.val();
             if(data && data.char) {
-                // Синхронизируем состояние "открытости" с базой
-                if(data.public) {
-                    for(let key in data.public) if(key !== 'name') opened[key] = true;
-                }
-                renderMyUI(data.char);
+                if(data.public) { for(let k in data.public) if(k !== 'name') opened[k] = true; }
+                renderUI(data.char);
             }
         });
 
@@ -177,12 +162,11 @@
                         <div style="font-size:13px;">
                             <b>${u}</b><br>
                             <span style="color:#777; font-size:11px;">
-                                ${pub.p ? '🛠️ '+pub.p+' | ' : ''} ${pub.h ? '🏥 '+pub.h : ''}
-                                ${pub.g ? ' | 👤 '+pub.g : ''}
-                                ${Object.keys(pub).length <= 1 ? 'Данные засекречены' : ''}
+                                ${pub.p?'🛠️ '+pub.p:''} ${pub.h?'🏥 '+pub.h:''} ${pub.r?'🧬 '+pub.r:''}
+                                ${Object.keys(pub).length<=1?'Засекречено':''}
                             </span>
                         </div>
-                        ${isHost && u !== myName ? `<button style="width:auto; padding:5px 10px; font-size:10px; background:#444;" onclick="kick('${u}')">КИК</button>` : ''}
+                        ${isHost && u!==myName ? `<button style="width:auto; padding:4px 8px; font-size:9px;" onclick="kick('${u}')">КИК</button>`:''}
                     </div>`;
             }
         });
@@ -193,15 +177,15 @@
         });
     }
 
-    function renderMyUI(char) {
-        document.getElementById('roomStat').innerText = `ROOM: ${curRoom} | ТЫ: ${myName}`;
+    function renderUI(char) {
+        document.getElementById('roomStat').innerText = `ID: ${curRoom} | ТЫ: ${myName}`;
         const items = [
             {id:'p', l:'Профессия', v:char.p},
             {id:'h', l:'Здоровье', v:char.h},
+            {id:'r', l:'Репродуктивность', v:char.r},
             {id:'b', l:'Багаж', v:char.b},
             {id:'g', l:'Биология', v:char.g + ', ' + char.age + ' л.'},
-            {id:'phob', l:'Фобия', v:char.phob},
-            {id:'t', l:'Черта', v:char.t}
+            {id:'phob', l:'Фобия', v:char.phob}
         ];
 
         let h = "";
@@ -222,11 +206,11 @@
         if(opened[id]) return;
         opened[id] = true;
         database.ref(`rooms/${curRoom}/users/${myName}/public/${id}`).set(val);
-        addLog(`👁️ ${myName} раскрыл: ${label}`);
+        addLog(`👁️ ${myName} вскрыл: ${label}`);
     }
 
     function cast(card, slot) {
-        if(!confirm(`Использовать "${card}"?`)) return;
+        if(!confirm(`Использовать карту?`)) return;
         usedCards[slot] = true;
         
         database.ref(`rooms/${curRoom}/users`).once('value', snap => {
@@ -234,39 +218,31 @@
             const txt = card.toUpperCase();
 
             if(txt.includes("КАТАСТРОФА")) {
-                const newD = dbData.d[Math.floor(Math.random()*dbData.d.length)];
-                database.ref(`rooms/${curRoom}/disaster`).set(newD);
+                database.ref(`rooms/${curRoom}/disaster`).set(dbData.d[Math.floor(Math.random()*dbData.d.length)]);
             } else {
                 for(let u in users) {
                     let c = users[u].char;
-                    let pubUpdate = {};
+                    let pub = users[u].public || {};
+                    let updPublic = {};
 
                     if(txt.includes("ПОЛА")) c.g = (c.g === "Мужчина" ? "Женщина" : "Мужчина");
                     if(txt.includes("ОМОЛОЖ")) c.age = 18;
-                    if(txt.includes("ИСЦЕЛ")) c.h = "Идеальное";
+                    if(txt.includes("ИСЦЕЛ")) { c.h = "Идеальное"; c.r = "Плодовит(а)"; }
                     if(txt.includes("ГИПНОЗ")) c.phob = "Нет фобий";
                     if(txt.includes("ОБМЕН")) c.p = dbData.p[Math.floor(Math.random()*dbData.p.length)];
-                    if(txt.includes("ОБЫСК")) c.b = "Конфисковано";
-                    if(txt.includes("МУТАЦИЯ")) c.t = dbData.t[Math.floor(Math.random()*dbData.t.length)];
+                    if(txt.includes("ОБЫСК")) c.b = "Пусто";
                     
-                    // Обновляем скрытую карточку
                     database.ref(`rooms/${curRoom}/users/${u}/char`).update(c);
                     
-                    // Синхронно обновляем публичные данные, если они были открыты ранее
-                    const currentPub = users[u].public || {};
-                    if(currentPub.p) pubUpdate.p = c.p;
-                    if(currentPub.h) pubUpdate.h = c.h;
-                    if(currentPub.b) pubUpdate.b = c.b;
-                    if(currentPub.g) pubUpdate.g = c.g + ", " + c.age + " л.";
-                    if(currentPub.phob) pubUpdate.phob = c.phob;
-                    if(currentPub.t) pubUpdate.t = c.t;
-
-                    if(Object.keys(pubUpdate).length > 0) {
-                        database.ref(`rooms/${curRoom}/users/${u}/public`).update(pubUpdate);
-                    }
+                    // Обновляем публичные поля
+                    if(pub.p) updPublic.p = c.p;
+                    if(pub.h) updPublic.h = c.h;
+                    if(pub.r) updPublic.r = c.r;
+                    if(pub.g) updPublic.g = c.g + ", " + c.age + " л.";
+                    if(Object.keys(updPublic).length > 0) database.ref(`rooms/${curRoom}/users/${u}/public`).update(updPublic);
                 }
             }
-            addLog(`🧨 ${myName} ПРИМЕНИЛ: ${card}`);
+            addLog(`🧨 ${myName} применил: ${card}`);
         });
     }
 
