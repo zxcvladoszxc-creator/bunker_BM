@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bunker Unique v10.3</title>
+    <title>Bunker Random v10.4</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -73,7 +73,7 @@
 
         <div id="ui_my_card"></div>
 
-        <h3 style="color:var(--gray); font-size:9px; margin:15px 0 5px 0;">ВЫЖИВШИЕ В ГРУППЕ:</h3>
+        <h3 style="color:var(--gray); font-size:9px; margin:15px 0 5px 0;">СПИСОК ВЫЖИВШИХ:</h3>
         <div id="ui_players"></div>
         <div class="log-box" id="ui_log"></div>
     </div>
@@ -91,7 +91,7 @@
         hobbies: ["Рыбалка", "Спорт", "Кулинария", "Рисование", "Чтение", "Ориентирование", "Йога", "Стрельба", "Плотничество"],
         bags: ["Аптечка", "Топор", "Рация", "Фонарь", "Пистолет", "Запас еды", "Нож", "Веревка", "Спички", "Бинокль"],
         facts: ["Знает код от сейфа", "Гениальный интеллект", "Мастер на все руки", "Бывший военный", "Знает 5 языков", "Чует опасность"],
-        s: ["СМЕНА ПОЛА", "ИСЦЕЛЕНИЕ", "ОМОЛОЖЕНИЕ", "НОВАЯ КАТАСТРОФА", "НОВАЯ УГРОЗА"]
+        s: ["СМЕНА ПОЛА", "ИСЦЕЛЕНИЕ", "РАНДОМ ВОЗРАСТ", "НОВАЯ КАТАСТРОФА", "НОВАЯ УГРОЗА"]
     };
 
     const firebaseConfig = { databaseURL: "https://bunker-bm-853f2-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -105,7 +105,6 @@
         document.getElementById(id).classList.add('active');
     }
 
-    // Тщательное перемешивание массива на основе Seed
     function shuffle(array, seed) {
         let m = array.length, t, i;
         while (m) {
@@ -142,17 +141,11 @@
 
         database.ref('rooms/' + curRoom).once('value', snap => {
             if(!snap.exists()) return alert("Комната не найдена");
-            
-            // Получаем список игроков, чтобы понять порядковый номер текущего игрока
             const roomData = snap.val();
             const players = roomData.users ? Object.keys(roomData.users) : [];
             const playerIndex = players.includes(myName) ? players.indexOf(myName) : players.length;
+            let roomSeed = 0; for(let i=0; i<curRoom.length; i++) roomSeed += curRoom.charCodeAt(i);
 
-            // Генерируем Seed на основе названия комнаты
-            let roomSeed = 0; 
-            for(let i=0; i<curRoom.length; i++) roomSeed += curRoom.charCodeAt(i);
-
-            // Создаем уникальные перемешанные колоды для этой комнаты
             const profs = shuffle([...dbData.p], roomSeed + 1);
             const healths = shuffle([...dbData.health], roomSeed + 2);
             const hobs = shuffle([...dbData.hobbies], roomSeed + 3);
@@ -160,7 +153,6 @@
             const facts = shuffle([...dbData.facts], roomSeed + 5);
             const specs = shuffle([...dbData.s], roomSeed + 6);
 
-            // Индивидуальный сид для биологии (пол/возраст/репродуктивность могут совпадать, это база)
             let s = 0; for(let i=0; i<(curRoom+myName).length; i++) s += (curRoom+myName).charCodeAt(i);
 
             const char = {
@@ -264,8 +256,9 @@
                         c.bio = (c.bio.includes("Муж") ? "Женщина" : "Мужчина") + ", " + c.bio.split(', ')[1];
                         if(p.bio) updP.bio = c.bio;
                     }
-                    if(txt.includes("ОМОЛОЖ")) {
-                        c.bio = c.bio.split(', ')[0] + ", 18 лет";
+                    if(txt.includes("ВОЗРАСТ")) {
+                        let randAge = Math.floor(Math.random() * 68) + 18;
+                        c.bio = c.bio.split(', ')[0] + ", " + randAge + " лет";
                         if(p.bio) updP.bio = c.bio;
                     }
                     if(txt.includes("ИСЦЕЛ")) {
