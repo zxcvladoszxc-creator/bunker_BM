@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bunker Classic v10.1</title>
+    <title>Bunker Sync v10.2</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -16,7 +16,6 @@
         .screen { display: none; animation: fadeIn 0.3s ease; }
         .active { display: block; }
         h1 { color: var(--red); text-align: center; font-size: 2rem; margin: 10px 0; text-transform: uppercase; letter-spacing: 2px; }
-        
         .card { background: var(--card-bg); border-radius: 10px; padding: 10px 15px; margin-bottom: 8px; border-left: 5px solid var(--red); position: relative; }
         .c-prof { border-color: var(--gold); }
         .c-bio { border-color: var(--green); }
@@ -25,16 +24,13 @@
         .c-bag { border-color: #535c68; }
         .c-fact { border-color: var(--orange); }
         .c-global { border-color: var(--purple); background: #1e1e24; }
-
         .label { color: var(--gray); font-size: 9px; text-transform: uppercase; font-weight: 800; display: block; margin-bottom: 2px; }
         .val { font-size: 14px; font-weight: 600; }
         .eye { float: right; cursor: pointer; background: #222; padding: 3px 8px; border-radius: 5px; font-size: 10px; border: 1px solid #333; }
         .eye.open { background: var(--green); color: #000; border-color: var(--green); pointer-events: none; }
-
         input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #222; background: #000; color: #fff; box-sizing: border-box; }
-        button { width: 100%; padding: 14px; background: var(--red); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        button { width: 100%; padding: 14px; background: var(--red); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         button:disabled { opacity: 0.3; cursor: not-allowed; }
-        
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .log-box { background: #000; border-radius: 8px; padding: 8px; margin-top: 15px; font-size: 10px; color: #777; height: 80px; overflow-y: auto; border: 1px solid #1a1a1a; }
         .player-row { background: #111; padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 12px; border: 1px solid #222; }
@@ -47,7 +43,7 @@
     <div id="scr_m" class="screen active">
         <h1>BUNKER</h1>
         <button onclick="sw('scr_h')">СОЗДАТЬ СЕРВЕР</button>
-        <button style="background:var(--gray)" onclick="sw('scr_j')">ПРИСОЕДИНИТЬСЯ</button>
+        <button style="background:var(--gray); margin-top:10px;" onclick="sw('scr_j')">ПРИСОЕДИНИТЬСЯ</button>
     </div>
 
     <div id="scr_h" class="screen">
@@ -95,7 +91,7 @@
         hobbies: ["Рыбалка", "Спорт", "Кулинария", "Рисование", "Чтение", "Ориентирование"],
         bags: ["Аптечка", "Топор", "Рация", "Фонарь", "Пистолет", "Запас еды", "Нож"],
         facts: ["Знает код от сейфа", "Гениальный интеллект", "Мастер на все руки", "Бывший военный"],
-        s: ["ТРАХ-ТИБИДОХ", "СМЕНА ПОЛА", "ИСЦЕЛЕНИЕ", "ОМОЛОЖЕНИЕ", "НОВАЯ КАТАСТРОФА"]
+        s: ["СМЕНА ПОЛА", "ИСЦЕЛЕНИЕ", "ОМОЛОЖЕНИЕ", "НОВАЯ КАТАСТРОФА"]
     };
 
     const firebaseConfig = { databaseURL: "https://bunker-bm-853f2-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -119,7 +115,7 @@
             disaster: dbData.d[Math.floor(Math.random()*dbData.d.length)],
             threat: dbData.threats[Math.floor(Math.random()*dbData.threats.length)],
             bunker: dbData.bunker[Math.floor(Math.random()*dbData.bunker.length)],
-            log: ["Игра началась"], started: false 
+            log: ["Игра создана"], started: false 
         });
         myName = "HOST_" + Math.floor(Math.random()*99);
         joinGame(true);
@@ -134,10 +130,7 @@
 
         database.ref('rooms/' + curRoom).once('value', snap => {
             if(!snap.exists()) return alert("Комната не найдена");
-            if(snap.val().started && !asHost) return alert("Вход закрыт");
-
             let s = 0; for(let i=0; i<(curRoom+myName).length; i++) s += (curRoom+myName).charCodeAt(i);
-            
             const char = {
                 p: dbData.p[Math.floor(seeded(s+1)*dbData.p.length)],
                 bio: dbData.g[Math.floor(seeded(s+2)*dbData.g.length)] + ", " + (Math.floor(seeded(s+3)*40)+20) + " лет",
@@ -149,7 +142,6 @@
                 s1: dbData.s[Math.floor(seeded(s+9)*dbData.s.length)],
                 s2: dbData.s[Math.floor(seeded(s+10)*dbData.s.length)]
             };
-
             database.ref(`rooms/${curRoom}/users/${myName}`).set({ char, public: { name: myName } });
             if(isHost) document.getElementById('startBtn').style.display = 'block';
             setupSync();
@@ -176,15 +168,12 @@
             container.innerHTML = "";
             for(let u in users) {
                 const pub = users[u].public || {};
-                container.innerHTML += `
-                    <div class="player-row">
-                        <b>${u}</b><br>
-                        <span style="color:#888; font-size:10px; line-height: 1.4;">
-                            ${pub.p?'🛠️ '+pub.p:''} ${pub.bio?' | 🧬 '+pub.bio:''} ${pub.r?' | 🍼 '+pub.r:''}
-                            ${pub.h?' | 🏥 '+pub.h:''} ${pub.hob?' | ⚽ '+pub.hob:''} ${pub.b?' | 🎒 '+pub.b:''} ${pub.f?' | 📄 '+pub.f:''}
-                            ${Object.keys(pub).length<=1?'Все данные скрыты':''}
-                        </span>
-                    </div>`;
+                container.innerHTML += `<div class="player-row"><b>${u}</b><br>
+                    <span style="color:#888; font-size:10px;">
+                        ${pub.p?'🛠️ '+pub.p:''} ${pub.bio?' | 🧬 '+pub.bio:''} ${pub.r?' | 🍼 '+pub.r:''}
+                        ${pub.h?' | 🏥 '+pub.h:''} ${pub.hob?' | ⚽ '+pub.hob:''} ${pub.b?' | 🎒 '+pub.b:''} ${pub.f?' | 📄 '+pub.f:''}
+                        ${Object.keys(pub).length<=1?'Данные скрыты':''}
+                    </span></div>`;
             }
         });
 
@@ -205,18 +194,14 @@
             {id:'b', l:'Багаж', v:char.b, c:'c-bag'},
             {id:'f', l:'Факт', v:char.f, c:'c-fact'}
         ];
-
         let h = "";
         config.forEach(i => {
-            h += `<div class="card ${i.c}">
-                <span class="eye ${opened[i.id]?'open':''}" onclick="reveal('${i.id}','${i.v}','${i.l}')">${opened[i.id]?'✓':'👁️'}</span>
-                <span class="label">${i.l}</span><span class="val">${i.v}</span>
-            </div>`;
+            h += `<div class="card ${i.c}"><span class="eye ${opened[i.id]?'open':''}" onclick="reveal('${i.id}','${i.v}','${i.l}')">${opened[i.id]?'✓':'👁️'}</span>
+                <span class="label">${i.l}</span><span class="val">${i.v}</span></div>`;
         });
         h += `<div class="grid-2" style="margin-top:10px;">
             <button onclick="cast('${char.s1}','s1')" ${usedCards.s1?'disabled':''} style="font-size:9px; background:none; border:1px solid var(--purple); color:var(--purple)">${usedCards.s1?'ИСПОЛЬЗОВАНО':char.s1}</button>
-            <button onclick="cast('${char.s2}','s2')" ${usedCards.s2?'disabled':''} style="font-size:9px; background:none; border:1px solid var(--purple); color:var(--purple)">${usedCards.s2?'ИСПОЛЬЗОВАНО':char.s2}</button>
-        </div>`;
+            <button onclick="cast('${char.s2}','s2')" ${usedCards.s2?'disabled':''} style="font-size:9px; background:none; border:1px solid var(--purple); color:var(--purple)">${usedCards.s2?'ИСПОЛЬЗОВАНО':char.s2}</button></div>`;
         document.getElementById('ui_my_card').innerHTML = h;
     }
 
@@ -228,22 +213,33 @@
     }
 
     function cast(card, slot) {
-        if(!confirm(`Использовать спецкарту "${card}"?`)) return;
+        if(!confirm(`Использовать "${card}"?`)) return;
         usedCards[slot] = true;
-        
         database.ref(`rooms/${curRoom}/users`).once('value', snap => {
             const users = snap.val();
             const txt = card.toUpperCase();
-
             if(txt.includes("КАТАСТРОФА")) {
                 database.ref(`rooms/${curRoom}/disaster`).set(dbData.d[Math.floor(Math.random()*dbData.d.length)]);
             } else {
                 for(let u in users) {
                     let c = users[u].char;
-                    if(txt.includes("ПОЛА")) c.bio = (c.bio.includes("Муж") ? "Женщина" : "Мужчина") + c.bio.substring(c.bio.indexOf(','));
-                    if(txt.includes("ОМОЛОЖ")) c.bio = c.bio.split(',')[0] + ", 18 лет";
-                    if(txt.includes("ИСЦЕЛ")) { c.h = "Идеальное"; c.r = "Плодовит(а)"; }
-                    database.ref(`rooms/${curRoom}/users/${u}/char`).update(c);
+                    let p = users[u].public || {};
+                    let updP = {};
+                    if(txt.includes("ПОЛА")) {
+                        c.bio = (c.bio.includes("Муж") ? "Женщина" : "Мужчина") + ", " + c.bio.split(', ')[1];
+                        if(p.bio) updP.bio = c.bio;
+                    }
+                    if(txt.includes("ОМОЛОЖ")) {
+                        c.bio = c.bio.split(', ')[0] + ", 18 лет";
+                        if(p.bio) updP.bio = c.bio;
+                    }
+                    if(txt.includes("ИСЦЕЛ")) {
+                        c.h = "Идеальное"; c.r = "Плодовит(а)";
+                        if(p.h) updP.h = c.h;
+                        if(p.r) updP.r = c.r;
+                    }
+                    database.ref(`rooms/${curRoom}/users/${u}/char`).set(c);
+                    if(Object.keys(updP).length > 0) database.ref(`rooms/${curRoom}/users/${u}/public`).update(updP);
                 }
             }
             addLog(`🧨 ${myName} применил: ${card}`);
