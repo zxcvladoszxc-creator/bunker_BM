@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bunker Sync v9.0</title>
+    <title>Bunker Debugged v9.1</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --red: #ff4757; --dark: #0a0a0c; --card: #16161a; --green: #2ecc71; --gray: #57606f; --gold: #f1c40f; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--dark); color: #fff; margin: 0; display: flex; justify-content: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--dark); color: #fff; margin: 0; display: flex; justify-content: center; overflow-x: hidden; }
         .container { width: 100%; max-width: 500px; padding: 15px; box-sizing: border-box; }
         .screen { display: none; animation: fadeIn 0.3s ease; }
         .active { display: block; }
         h1 { color: var(--red); text-align: center; font-size: 2.2rem; margin: 15px 0; text-shadow: 0 0 15px rgba(255,71,87,0.4); }
-        .card { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px; border-left: 4px solid var(--red); }
-        input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #222; background: #000; color: #fff; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: var(--red); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .card { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px; border-left: 4px solid var(--red); transition: 0.3s; }
+        input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #222; background: #000; color: #fff; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 15px; background: var(--red); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
         .label { color: var(--gray); font-size: 10px; text-transform: uppercase; font-weight: 800; display: block; }
         .val { font-size: 15px; font-weight: 600; }
-        .eye { float: right; cursor: pointer; background: #222; padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #333; transition: 0.2s; }
-        .eye.open { background: var(--green); color: #000; border-color: var(--green); }
-        .player-row { background: #111; border: 1px solid #222; border-radius: 10px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; }
-        .log-box { background: #000; border-radius: 8px; padding: 10px; margin-top: 15px; font-size: 11px; color: #666; height: 80px; overflow-y: auto; border: 1px solid #1a1a1a; }
+        .eye { float: right; cursor: pointer; background: #222; padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #333; }
+        .eye.open { background: var(--green); color: #000; border-color: var(--green); pointer-events: none; }
+        .player-row { background: #111; border: 1px solid #222; border-radius: 10px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .log-box { background: #000; border-radius: 8px; padding: 10px; margin-top: 15px; font-size: 11px; color: #666; height: 100px; overflow-y: auto; border: 1px solid #1a1a1a; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; } }
     </style>
 </head>
@@ -36,12 +37,12 @@
 
     <div id="scr_h" class="screen">
         <h2>Новый сервер</h2>
-        <input type="text" id="h_room" placeholder="ID Комнаты">
+        <input type="text" id="h_room" placeholder="ID Комнаты (напр. ALPHA)">
         <button onclick="initRoom()">Запустить</button>
     </div>
 
     <div id="scr_j" class="screen">
-        <h2>Вход</h2>
+        <h2>Вход в игру</h2>
         <input type="text" id="j_room" placeholder="ID Комнаты">
         <input type="text" id="j_name" placeholder="Твое имя">
         <button onclick="joinGame()">Войти</button>
@@ -55,12 +56,12 @@
         
         <div id="ui_disaster" class="card" style="border-color:var(--gold)">
             <span class="label">Сценарий катастрофы</span>
-            <span class="val" id="disaster_text">Загрузка...</span>
+            <span class="val" id="disaster_text">Ожидание данных...</span>
         </div>
 
         <div id="ui_my_card"></div>
 
-        <h3 style="color:var(--gray); font-size:10px; margin-top:15px;">ВЫЖИВШИЕ В БУНКЕРЕ:</h3>
+        <h3 style="color:var(--gray); font-size:10px; margin-top:15px; letter-spacing: 1px;">ВЫЖИВШИЕ В БУНКЕРЕ:</h3>
         <div id="ui_players"></div>
         <div class="log-box" id="ui_log"></div>
     </div>
@@ -68,14 +69,14 @@
 
 <script>
     const dbData = {
-        d: ["Ядерная зима", "Всемирный потоп", "Зомби-апокалипсис", "Восстание машин", "Обледенение земли", "Кислотные дожди", "Солнечная вспышка", "Грибковое заражение"],
-        p: ["Хирург", "Электрик", "Повар", "Спецназовец", "Учитель", "Программист", "Инженер", "Агроном", "Ветеринар", "Священник", "Охотник", "Физик", "Химик", "Слесарь", "Психолог", "Пилот"],
-        h: ["Идеальное", "Астма", "Диабет", "Слабое сердце", "Близорукость", "Аллергия", "Панические атаки", "Бессонница", "Хронический кашель"],
-        b: ["Аптечка", "Топор", "Рация", "Запас еды", "Фонарь", "Пистолет", "Семена", "Нож", "Фильтр для воды", "Спички"],
-        t: ["Лидер", "Мастер", "Меткий", "Выносливый", "Умный", "Скрытный", "Сильный", "Удачливый"],
+        d: ["Ядерная зима", "Всемирный потоп", "Зомби-апокалипсис", "Восстание машин", "Обледенение земли", "Кислотные дожди", "Солнечная вспышка", "Грибковое заражение", "Инопланетное вторжение", "Пандемия бесплодия"],
+        p: ["Хирург", "Электрик", "Повар", "Спецназовец", "Учитель", "Программист", "Инженер", "Агроном", "Ветеринар", "Священник", "Охотник", "Физик", "Химик", "Слесарь", "Психолог", "Пилот", "Строитель", "Адвокат"],
+        h: ["Идеальное", "Астма", "Диабет", "Слабое сердце", "Близорукость", "Аллергия на арахис", "Панические атаки", "Бессонница", "Хронический кашель", "Глухота на одно ухо"],
+        b: ["Аптечка", "Топор", "Рация", "Запас еды", "Фонарь", "Пистолет", "Семена", "Нож", "Фильтр для воды", "Спички", "Веревка", "Бронежилет"],
+        t: ["Лидер", "Мастер на все руки", "Меткий стрелок", "Выносливый", "Эрудит", "Скрытный", "Силач", "Везунчик"],
         g: ["Мужчина", "Женщина"],
-        phob: ["Темнота", "Высота", "Пауки", "Кровь", "Тишина", "Огонь"],
-        s: ["СМЕНА ПОЛА (ВСЕМ)", "ОМОЛОЖЕНИЕ (ВСЕМ 18 ЛЕТ)", "ИСЦЕЛЕНИЕ (ВСЕМ)", "НОВАЯ КАТАСТРОФА", "ГИПНОЗ (БЕЗ ФОБИЙ)", "ОБМЕН ПРОФЕССИЯМИ", "ОБЫСК (МИНУС БАГАЖ)"]
+        phob: ["Темнота", "Высота", "Пауки", "Кровь", "Замкнутое пространство", "Огонь"],
+        s: ["СМЕНА ПОЛА (ВСЕМ)", "ОМОЛОЖЕНИЕ (ВСЕМ 18 ЛЕТ)", "ИСЦЕЛЕНИЕ (ВСЕМ)", "НОВАЯ КАТАСТРОФА", "ГИПНОЗ (БЕЗ ФОБИЙ)", "ОБМЕН ПРОФЕССИЯМИ", "ОБЫСК (МИНУС БАГАЖ)", "МУТАЦИЯ (НОВАЯ ЧЕРТА)"]
     };
 
     const firebaseConfig = { databaseURL: "https://bunker-bm-853f2-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -95,11 +96,10 @@
         curRoom = document.getElementById('h_room').value.trim().toUpperCase();
         if(!curRoom) return;
         isHost = true;
-        // Генерируем катастрофу ОДИН РАЗ для всей комнаты
         const globalDisaster = dbData.d[Math.floor(Math.random() * dbData.d.length)];
         database.ref('rooms/' + curRoom).set({ 
             disaster: globalDisaster,
-            log: ["Комната создана"], 
+            log: ["Система инициализирована"], 
             started: false 
         });
         myName = "HOST_" + Math.floor(Math.random()*99);
@@ -118,7 +118,6 @@
             if(!room) return alert("Комната не найдена");
             if(room.started && !asHost) return alert("Вход закрыт!");
 
-            // Отображаем общую катастрофу
             document.getElementById('disaster_text').innerText = room.disaster;
 
             let s = 0; for(let i=0; i<(curRoom+myName).length; i++) s += (curRoom+myName).charCodeAt(i);
@@ -134,11 +133,17 @@
                 g: dbData.g[Math.floor(seeded(s+5)*dbData.g.length)],
                 age: Math.floor(seeded(s+6)*40)+20,
                 phob: dbData.phob[Math.floor(seeded(s+10)*dbData.phob.length)],
+                t: dbData.t[Math.floor(seeded(s+12)*dbData.t.length)],
                 s1: c1, s2: c2
             };
 
             database.ref(`rooms/${curRoom}/users/${myName}`).set({ char, public: { name: myName } });
             
+            // Если игрока удалил хост
+            database.ref(`rooms/${curRoom}/users/${myName}`).on('value', s => {
+                if(!s.exists()) { alert("Вы покинули бункер (Кик)"); location.reload(); }
+            });
+
             if(isHost) document.getElementById('startBtn').style.display = 'block';
             setupGameSync();
             sw('scr_g');
@@ -146,17 +151,21 @@
     }
 
     function setupGameSync() {
-        // Следим за катастрофой (на случай если её изменят спецкартой)
         database.ref(`rooms/${curRoom}/disaster`).on('value', s => {
             document.getElementById('disaster_text').innerText = s.val();
         });
 
-        // Следим за своими данными (если их изменят другие игроки спецкартой)
-        database.ref(`rooms/${curRoom}/users/${myName}/char`).on('value', snap => {
-            if(snap.val()) renderMyUI(snap.val());
+        database.ref(`rooms/${curRoom}/users/${myName}`).on('value', snap => {
+            const data = snap.val();
+            if(data && data.char) {
+                // Синхронизируем состояние "открытости" с базой
+                if(data.public) {
+                    for(let key in data.public) if(key !== 'name') opened[key] = true;
+                }
+                renderMyUI(data.char);
+            }
         });
 
-        // Следим за списком игроков
         database.ref(`rooms/${curRoom}/users`).on('value', snap => {
             const users = snap.val();
             const container = document.getElementById('ui_players');
@@ -169,10 +178,11 @@
                             <b>${u}</b><br>
                             <span style="color:#777; font-size:11px;">
                                 ${pub.p ? '🛠️ '+pub.p+' | ' : ''} ${pub.h ? '🏥 '+pub.h : ''}
-                                ${!pub.p && !pub.h ? 'Засекречено' : ''}
+                                ${pub.g ? ' | 👤 '+pub.g : ''}
+                                ${Object.keys(pub).length <= 1 ? 'Данные засекречены' : ''}
                             </span>
                         </div>
-                        ${isHost && u !== myName ? `<button style="width:auto; padding:3px 8px; font-size:9px;" onclick="kick('${u}')">КИК</button>` : ''}
+                        ${isHost && u !== myName ? `<button style="width:auto; padding:5px 10px; font-size:10px; background:#444;" onclick="kick('${u}')">КИК</button>` : ''}
                     </div>`;
             }
         });
@@ -184,13 +194,14 @@
     }
 
     function renderMyUI(char) {
-        document.getElementById('roomStat').innerText = `ROOM: ${curRoom} | ID: ${myName}`;
+        document.getElementById('roomStat').innerText = `ROOM: ${curRoom} | ТЫ: ${myName}`;
         const items = [
             {id:'p', l:'Профессия', v:char.p},
             {id:'h', l:'Здоровье', v:char.h},
             {id:'b', l:'Багаж', v:char.b},
-            {id:'g', l:'Биология', v:char.g + ', ' + char.age + ' лет'},
-            {id:'phob', l:'Фобия', v:char.phob}
+            {id:'g', l:'Биология', v:char.g + ', ' + char.age + ' л.'},
+            {id:'phob', l:'Фобия', v:char.phob},
+            {id:'t', l:'Черта', v:char.t}
         ];
 
         let h = "";
@@ -201,8 +212,8 @@
             </div>`;
         });
         h += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
-            <button onclick="cast('${char.s1}','s1')" ${usedCards.s1?'disabled':''} style="font-size:9px; background:#222; border:1px solid var(--green)">${char.s1}</button>
-            <button onclick="cast('${char.s2}','s2')" ${usedCards.s2?'disabled':''} style="font-size:9px; background:#222; border:1px solid var(--green)">${char.s2}</button>
+            <button onclick="cast('${char.s1}','s1')" ${usedCards.s1?'disabled':''} style="font-size:9px; background:#222; border:1px solid var(--green); color:var(--green)">${char.s1}</button>
+            <button onclick="cast('${char.s2}','s2')" ${usedCards.s2?'disabled':''} style="font-size:9px; background:#222; border:1px solid var(--green); color:var(--green)">${char.s2}</button>
         </div>`;
         document.getElementById('ui_my_card').innerHTML = h;
     }
@@ -211,11 +222,11 @@
         if(opened[id]) return;
         opened[id] = true;
         database.ref(`rooms/${curRoom}/users/${myName}/public/${id}`).set(val);
-        addLog(`👁️ ${myName} вскрыл: ${label}`);
+        addLog(`👁️ ${myName} раскрыл: ${label}`);
     }
 
     function cast(card, slot) {
-        if(!confirm(`Применить ${card}?`)) return;
+        if(!confirm(`Использовать "${card}"?`)) return;
         usedCards[slot] = true;
         
         database.ref(`rooms/${curRoom}/users`).once('value', snap => {
@@ -228,23 +239,34 @@
             } else {
                 for(let u in users) {
                     let c = users[u].char;
+                    let pubUpdate = {};
+
                     if(txt.includes("ПОЛА")) c.g = (c.g === "Мужчина" ? "Женщина" : "Мужчина");
                     if(txt.includes("ОМОЛОЖ")) c.age = 18;
                     if(txt.includes("ИСЦЕЛ")) c.h = "Идеальное";
                     if(txt.includes("ГИПНОЗ")) c.phob = "Нет фобий";
                     if(txt.includes("ОБМЕН")) c.p = dbData.p[Math.floor(Math.random()*dbData.p.length)];
-                    if(txt.includes("ОБЫСК")) c.b = "Пусто";
+                    if(txt.includes("ОБЫСК")) c.b = "Конфисковано";
+                    if(txt.includes("МУТАЦИЯ")) c.t = dbData.t[Math.floor(Math.random()*dbData.t.length)];
                     
+                    // Обновляем скрытую карточку
                     database.ref(`rooms/${curRoom}/users/${u}/char`).update(c);
                     
-                    // Обновляем публичные данные, если они уже были открыты
-                    let pub = users[u].public;
-                    if(pub.p) database.ref(`rooms/${curRoom}/users/${u}/public/p`).set(c.p);
-                    if(pub.h) database.ref(`rooms/${curRoom}/users/${u}/public/h`).set(c.h);
-                    if(pub.g) database.ref(`rooms/${curRoom}/users/${u}/public/g`).set(c.g + ", " + c.age + " лет");
+                    // Синхронно обновляем публичные данные, если они были открыты ранее
+                    const currentPub = users[u].public || {};
+                    if(currentPub.p) pubUpdate.p = c.p;
+                    if(currentPub.h) pubUpdate.h = c.h;
+                    if(currentPub.b) pubUpdate.b = c.b;
+                    if(currentPub.g) pubUpdate.g = c.g + ", " + c.age + " л.";
+                    if(currentPub.phob) pubUpdate.phob = c.phob;
+                    if(currentPub.t) pubUpdate.t = c.t;
+
+                    if(Object.keys(pubUpdate).length > 0) {
+                        database.ref(`rooms/${curRoom}/users/${u}/public`).update(pubUpdate);
+                    }
                 }
             }
-            addLog(`🧨 ${myName} АКТИВИРОВАЛ: ${card}`);
+            addLog(`🧨 ${myName} ПРИМЕНИЛ: ${card}`);
         });
     }
 
